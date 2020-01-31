@@ -1,0 +1,5 @@
+#init
+
+motor -> motorDevInit
+ |-> dshotPwmDevInit (dshot_dpwm)
+    |-> timerAllocate (timer_common)
