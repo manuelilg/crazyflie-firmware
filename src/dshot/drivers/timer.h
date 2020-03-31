@@ -41,10 +41,20 @@ typedef uint8_t rccPeriphTag_t;
 #include "drivers/io.h"
 //*/
 
+#define USABLE_TIMER_CHANNEL_COUNT 4
 
 #define CC_CHANNELS_PER_TIMER         4 // TIM_Channel_1..4
 #define CC_INDEX_FROM_CHANNEL(x)      ((uint8_t)((x) >> 2))
 #define CC_CHANNEL_FROM_INDEX(x)      ((uint16_t)(x) << 2)
+
+//const timerHardware_t timerHardware[USABLE_TIMER_CHANNEL_COUNT] = {
+//        // TIM2_UP  (DMA1_ST1_CH3, DMA1_ST7_CH3)
+//        DEF_TIM(TIM2,  CH3,  PA2,  TIM_USE_MOTOR,               0, 0), // M1
+//        DEF_TIM(TIM2,  CH4,  PA3,  TIM_USE_MOTOR,               0, 0), // M4
+//        // TIM3_UP (DMA1_ST2_CH5)
+//        DEF_TIM(TIM3,  CH1,  PB4,  TIM_USE_MOTOR,               0, 0), // M2
+//        DEF_TIM(TIM3,  CH2,  PB5,  TIM_USE_MOTOR,               0, 0), // M3
+//};
 
 typedef uint16_t captureCompare_t;        // 16 bit on both 103 and 303, just register access must be 32bit sometimes (use timCCR_t)
 
@@ -119,12 +129,12 @@ typedef enum {
 
 #define MHZ_TO_HZ(x) ((x) * 1000000)
 
-#if !defined(USE_UNIFIED_TARGET)
+//#if !defined(USE_UNIFIED_TARGET)
 extern const timerHardware_t timerHardware[];
-#endif
+//#endif
 
 #define TIMER_CHANNEL_COUNT USABLE_TIMER_CHANNEL_COUNT
-#define TIMER_HARDWARE timerHardware
+//#define TIMER_HARDWARE timerHardware
 
 extern const timerDef_t timerDefinitions[];
 

@@ -42,6 +42,8 @@
 /* ST includes */
 #include "stm32fxxx.h"
 
+#include "dshot_main.h"
+
 int main() 
 {
   //Initialize the platform.
@@ -53,6 +55,8 @@ int main()
 
   //Launch the system task that will initialize and start everything
   systemLaunch();
+
+  init_dshot();
 
   //Start the FreeRTOS scheduler
   vTaskStartScheduler();

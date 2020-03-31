@@ -22,14 +22,14 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "platform.h"
+#include "dshot/platform.h"
 
 
-#include "drivers/pwm_esc_detect.h"
-#include "drivers/pwm_output.h"
+//#include "drivers/pwm_esc_detect.h"
+#include "dshot/drivers/pwm_output.h"
 
-#include "pg/pg.h"
-#include "pg/pg_ids.h"
+//#include "pg/pg.h"
+//#include "pg/pg_ids.h"
 #include "pg/motor.h"
 
 //PG_REGISTER_WITH_RESET_FN(motorConfig_t, motorConfig, PG_MOTOR_CONFIG, 1);

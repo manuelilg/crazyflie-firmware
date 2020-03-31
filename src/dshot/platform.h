@@ -22,6 +22,10 @@
 
 #define NOINLINE __attribute__((noinline))
 
+#if !defined(UNIT_TEST) && !defined(SIMULATOR_BUILD) && !(USBD_DEBUG_LEVEL > 0)
+#pragma GCC poison sprintf snprintf
+#endif
+
 #include "stm32f4xx.h"
 
 // Chip Unique ID on F405
@@ -34,16 +38,14 @@
 #endif
 
 
-
 // MCU type names and IDs.
 // IDs are permanent as it has dependency to configurator through MSP reporting
-
 
 #define MCU_TYPE_ID   3
 #define MCU_TYPE_NAME "F40X"
 
 
-//#include "target/common_pre.h"
+#include "dshot/common/common_pre.h"
 //#include "target.h"
 //#include "target/common_deprecated_post.h"
 //#include "target/common_post.h"

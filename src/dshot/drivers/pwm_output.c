@@ -25,7 +25,6 @@
 
 #include "platform.h"
 
-#ifdef USE_PWM_OUTPUT
 
 #include "drivers/io.h"
 #include "drivers/motor.h"
@@ -39,22 +38,6 @@ FAST_RAM_ZERO_INIT pwmOutputPort_t motors[MAX_SUPPORTED_MOTORS];
 
 static void pwmOCConfig(TIM_TypeDef *tim, uint8_t channel, uint16_t value, uint8_t output)
 {
-#if defined(USE_HAL_DRIVER)
-    TIM_HandleTypeDef* Handle = timerFindTimerHandle(tim);
-    if (Handle == NULL) return;
-
-    TIM_OC_InitTypeDef TIM_OCInitStructure;
-
-    TIM_OCInitStructure.OCMode = TIM_OCMODE_PWM1;
-    TIM_OCInitStructure.OCIdleState = TIM_OCIDLESTATE_SET;
-    TIM_OCInitStructure.OCPolarity = (output & TIMER_OUTPUT_INVERTED) ? TIM_OCPOLARITY_LOW : TIM_OCPOLARITY_HIGH;
-    TIM_OCInitStructure.OCNIdleState = TIM_OCNIDLESTATE_SET;
-    TIM_OCInitStructure.OCNPolarity = (output & TIMER_OUTPUT_INVERTED) ? TIM_OCNPOLARITY_LOW : TIM_OCNPOLARITY_HIGH;
-    TIM_OCInitStructure.Pulse = value;
-    TIM_OCInitStructure.OCFastMode = TIM_OCFAST_DISABLE;
-
-    HAL_TIM_PWM_ConfigChannel(Handle, &TIM_OCInitStructure, channel);
-#else
     TIM_OCInitTypeDef TIM_OCInitStructure;
 
     TIM_OCStructInit(&TIM_OCInitStructure);
@@ -73,16 +56,10 @@ static void pwmOCConfig(TIM_TypeDef *tim, uint8_t channel, uint16_t value, uint8
 
     timerOCInit(tim, channel, &TIM_OCInitStructure);
     timerOCPreloadConfig(tim, channel, TIM_OCPreload_Enable);
-#endif
 }
 
 void pwmOutConfig(timerChannel_t *channel, const timerHardware_t *timerHardware, uint32_t hz, uint16_t period, uint16_t value, uint8_t inversion)
 {
-#if defined(USE_HAL_DRIVER)
-    TIM_HandleTypeDef* Handle = timerFindTimerHandle(timerHardware->tim);
-    if (Handle == NULL) return;
-#endif
-
     configTimeBase(timerHardware->tim, period, hz);
     pwmOCConfig(timerHardware->tim,
         timerHardware->channel,
@@ -90,16 +67,8 @@ void pwmOutConfig(timerChannel_t *channel, const timerHardware_t *timerHardware,
         inversion ? timerHardware->output ^ TIMER_OUTPUT_INVERTED : timerHardware->output
         );
 
-#if defined(USE_HAL_DRIVER)
-    if (timerHardware->output & TIMER_OUTPUT_N_CHANNEL)
-        HAL_TIMEx_PWMN_Start(Handle, timerHardware->channel);
-    else
-        HAL_TIM_PWM_Start(Handle, timerHardware->channel);
-    HAL_TIM_Base_Start(Handle);
-#else
     TIM_CtrlPWMOutputs(timerHardware->tim, ENABLE);
     TIM_Cmd(timerHardware->tim, ENABLE);
-#endif
 
     channel->ccr = timerChCCR(timerHardware);
 
@@ -233,11 +202,7 @@ motorDevice_t *motorPwmDevInit(const motorDevConfig_t *motorConfig, uint16_t idl
         motors[motorIndex].io = IOGetByTag(tag);
         IOInit(motors[motorIndex].io, OWNER_MOTOR, RESOURCE_INDEX(motorIndex));
 
-#if defined(STM32F1)
-        IOConfigGPIO(motors[motorIndex].io, IOCFG_AF_PP);
-#else
         IOConfigGPIOAF(motors[motorIndex].io, IOCFG_AF_PP, timerHardware->alternateFunction);
-#endif
 
         /* standard PWM outputs */
         // margin of safety is 4 periods when unsynced
@@ -278,45 +243,3 @@ pwmOutputPort_t *pwmGetMotors(void)
     return motors;
 }
 
-#ifdef USE_SERVOS
-static pwmOutputPort_t servos[MAX_SUPPORTED_SERVOS];
-
-void pwmWriteServo(uint8_t index, float value)
-{
-    if (index < MAX_SUPPORTED_SERVOS && servos[index].channel.ccr) {
-        *servos[index].channel.ccr = lrintf(value);
-    }
-}
-
-void servoDevInit(const servoDevConfig_t *servoConfig)
-{
-    for (uint8_t servoIndex = 0; servoIndex < MAX_SUPPORTED_SERVOS; servoIndex++) {
-        const ioTag_t tag = servoConfig->ioTags[servoIndex];
-
-        if (!tag) {
-            break;
-        }
-
-        servos[servoIndex].io = IOGetByTag(tag);
-
-        IOInit(servos[servoIndex].io, OWNER_SERVO, RESOURCE_INDEX(servoIndex));
-
-        const timerHardware_t *timer = timerAllocate(tag, OWNER_SERVO, RESOURCE_INDEX(servoIndex));
-
-        if (timer == NULL) {
-            /* flag failure and disable ability to arm */
-            break;
-        }
-
-#if defined(STM32F1)
-        IOConfigGPIO(servos[servoIndex].io, IOCFG_AF_PP);
-#else
-        IOConfigGPIOAF(servos[servoIndex].io, IOCFG_AF_PP, timer->alternateFunction);
-#endif
-
-        pwmOutConfig(&servos[servoIndex].channel, timer, PWM_TIMER_1MHZ, PWM_TIMER_1MHZ / servoConfig->servoPwmRate, servoConfig->servoCenterPulse, 0);
-        servos[servoIndex].enabled = true;
-    }
-}
-#endif // USE_SERVOS
-#endif // USE_PWM_OUTPUT

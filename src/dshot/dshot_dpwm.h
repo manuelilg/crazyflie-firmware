@@ -22,7 +22,9 @@
 
 #pragma once
 
-#include "drivers/motor.h"
+#include "dshot/motor.h"
+#include "dshot/drivers/dma.h"
+#include "dshot/drivers/timer.h"
 
 #define MOTOR_DSHOT600_HZ     MHZ_TO_HZ(12)
 #define MOTOR_DSHOT300_HZ     MHZ_TO_HZ(6)
@@ -65,10 +67,10 @@ motorDevice_t *dshotPwmDevInit(const struct motorDevConfig_s *motorConfig, uint1
 
 #define DSHOT_DMA_BUFFER_ALLOC_SIZE DSHOT_DMA_BUFFER_SIZE
 
-extern DSHOT_DMA_BUFFER_UNIT dshotDmaBuffer[MAX_SUPPORTED_MOTORS][DSHOT_DMA_BUFFER_ALLOC_SIZE];
-extern DSHOT_DMA_BUFFER_UNIT dshotDmaInputBuffer[MAX_SUPPORTED_MOTORS][DSHOT_DMA_BUFFER_ALLOC_SIZE];
+extern DSHOT_DMA_BUFFER_UNIT dshotDmaBuffer[4][DSHOT_DMA_BUFFER_ALLOC_SIZE];
+extern DSHOT_DMA_BUFFER_UNIT dshotDmaInputBuffer[4][DSHOT_DMA_BUFFER_ALLOC_SIZE];
 
-extern DSHOT_DMA_BUFFER_UNIT dshotBurstDmaBuffer[MAX_DMA_TIMERS][DSHOT_DMA_BUFFER_SIZE * 4];
+extern DSHOT_DMA_BUFFER_UNIT dshotBurstDmaBuffer[8][DSHOT_DMA_BUFFER_SIZE * 4];
 
 typedef struct {
     TIM_TypeDef *timer;
@@ -81,7 +83,7 @@ typedef struct {
 
 typedef struct motorDmaOutput_s {
     dshotProtocolControl_t protocolControl;
-    ioTag_t ioTag;
+    //ioTag_t ioTag;
     const timerHardware_t *timerHardware;
     uint16_t timerDmaSource;
     uint8_t timerDmaIndex;
@@ -94,7 +96,7 @@ typedef struct motorDmaOutput_s {
     dmaResource_t *dmaRef;
 
     motorDmaTimer_t *timer;
-    DSHOT_DMA_BUFFER_UNIT *dmaBuffer;
+    DSHOT_DMA_BUFFER_UNIT *dmaBuffer; // DSHOT_DMA_BUFFER_UNIT = uint32_t
 } motorDmaOutput_t;
 
 motorDmaOutput_t *getMotorDmaOutput(uint8_t index);

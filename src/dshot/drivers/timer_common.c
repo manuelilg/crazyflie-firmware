@@ -18,17 +18,17 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "platform.h"
+#include "dshot/platform.h"
 
-#include "drivers/dshot_bitbang.h"
-#include "drivers/io.h"
-#include "timer.h"
+//#include "dshot/dshot_bitbang.h"
+//#include "drivers/io.h"
+#include "dshot/drivers/timer.h"
 
 const timerHardware_t *timerGetByTag(ioTag_t ioTag)
 {
-    for (unsigned i = 0; i < TIMER_CHANNEL_COUNT; i++) {
-        if (TIMER_HARDWARE[i].tag == ioTag) {
-            return &TIMER_HARDWARE[i];
+    for (unsigned i = 0; i < 12; i++) {
+        if (timerHardware[i].tag == ioTag) {
+            return &timerHardware[i];
         }
     }
     return NULL;
@@ -36,15 +36,15 @@ const timerHardware_t *timerGetByTag(ioTag_t ioTag)
 
 const timerHardware_t *timerAllocate(ioTag_t ioTag, resourceOwner_e owner, uint8_t resourceIndex)
 {
-    UNUSED(owner);
-    UNUSED(resourceIndex);
+    //UNUSED(owner);
+    //UNUSED(resourceIndex);
 
     return timerGetByTag(ioTag);
 }
 
 ioTag_t timerioTagGetByUsage(timerUsageFlag_e usageFlag, uint8_t index)
 {
-#if !defined(USE_UNIFIED_TARGET) && USABLE_TIMER_CHANNEL_COUNT > 0
+//#if !defined(USE_UNIFIED_TARGET) && USABLE_TIMER_CHANNEL_COUNT > 0
     uint8_t currentIndex = 0;
     for (unsigned i = 0; i < USABLE_TIMER_CHANNEL_COUNT; i++) {
         if ((timerHardware[i].usageFlags & usageFlag) == usageFlag) {
@@ -54,9 +54,9 @@ ioTag_t timerioTagGetByUsage(timerUsageFlag_e usageFlag, uint8_t index)
             currentIndex++;
         }
     }
-#else
-    UNUSED(usageFlag);
-    UNUSED(index);
-#endif
+//#else
+//    UNUSED(usageFlag);
+//    UNUSED(index);
+//#endif
     return IO_TAG_NONE;
 }

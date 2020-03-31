@@ -3,3 +3,10 @@
 motor -> motorDevInit
  |-> dshotPwmDevInit (dshot_dpwm)
     |-> timerAllocate (timer_common)
+
+
+motor map BigQuad
+-> motors_def_cf2.c
+
+motor betaflight map
+-> dshot_main.c:59

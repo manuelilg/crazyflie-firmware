@@ -26,27 +26,27 @@
 #include "platform.h"
 
 
-#include "build/debug.h"
+//#include "build/debug.h"
 
 #include "drivers/dma.h"
-#include "drivers/dma_reqmap.h"
-#include "drivers/io.h"
-#include "drivers/nvic.h"
-#include "drivers/rcc.h"
-#include "drivers/time.h"
+//#include "drivers/dma_reqmap.h"
+//#include "drivers/io.h"
+//#include "drivers/nvic.h"
+//#include "drivers/rcc.h"
+//#include "drivers/time.h"
 #include "drivers/timer.h"
 #include "stm32f4xx.h"
 
 #include "pwm_output.h"
-#include "drivers/dshot.h"
-#include "drivers/dshot_dpwm.h"
-#include "drivers/dshot_command.h"
+#include "dshot/dshot.h"
+#include "dshot/dshot_dpwm.h"
+#include "dshot/dshot_command.h"
 
 #include "pwm_output_dshot_shared.h"
 
 FAST_RAM_ZERO_INIT uint8_t dmaMotorTimerCount = 0;
 motorDmaTimer_t dmaMotorTimers[MAX_DMA_TIMERS];
-motorDmaOutput_t dmaMotors[MAX_SUPPORTED_MOTORS];
+motorDmaOutput_t dmaMotors[4/*MAX_SUPPORTED_MOTORS*/];
 
 motorDmaOutput_t *getMotorDmaOutput(uint8_t index)
 {
@@ -93,7 +93,7 @@ FAST_CODE void pwmWriteDshotInt(uint8_t index, uint16_t value)
     {
         bufferSize = loadDmaBuffer(motor->dmaBuffer, 1, packet);
         motor->timer->timerDmaSources |= motor->timerDmaSource;
-        xLL_EX_DMA_SetDataLength(motor->dmaRef, bufferSize);
-        xLL_EX_DMA_EnableResource(motor->dmaRef);
+        xDMA_SetCurrDataCounter(motor->dmaRef, bufferSize);
+        xDMA_Cmd(motor->dmaRef, ENABLE);
     }
 }

@@ -59,7 +59,7 @@ static union {
     struct {
       uint16_t begin[LED_PER_HALF*24];
       uint16_t end[LED_PER_HALF*24];
-    } __attribute__((packed));
+    };// __attribute__((packed));
 } led_dma;
 
 void ws2812Init(void)

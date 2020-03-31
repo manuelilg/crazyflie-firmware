@@ -25,19 +25,19 @@
 #include <math.h>
 #include <string.h>
 
-#include "platform.h"
+#include "dshot/platform.h"
 
 
-#include "drivers/pwm_output.h"
-#include "drivers/dshot.h"
-#include "drivers/dshot_dpwm.h"
-#include "drivers/motor.h"
+//#include "dshot/drivers/pwm_output.h"
+#include "dshot/dshot.h"
+#include "dshot/dshot_dpwm.h"
+#include "dshot/motor.h"
 
-#include "pg/motor.h"
+#include "dshot/pg/motor.h"
 
 // XXX TODO: Share a single region among dshotDmaBuffer and dshotBurstDmaBuffer
 
-DSHOT_DMA_BUFFER_ATTRIBUTE DSHOT_DMA_BUFFER_UNIT dshotDmaBuffer[MAX_SUPPORTED_MOTORS][DSHOT_DMA_BUFFER_ALLOC_SIZE];
+DSHOT_DMA_BUFFER_ATTRIBUTE DSHOT_DMA_BUFFER_UNIT dshotDmaBuffer[4/*MAX_SUPPORTED_MOTORS*/][DSHOT_DMA_BUFFER_ALLOC_SIZE];
 
 DSHOT_DMA_BUFFER_ATTRIBUTE DSHOT_DMA_BUFFER_UNIT dshotBurstDmaBuffer[MAX_DMA_TIMERS][DSHOT_DMA_BUFFER_SIZE * 4];
 
@@ -58,18 +58,18 @@ FAST_CODE uint8_t loadDmaBufferDshot(uint32_t *dmaBuffer, int stride, uint16_t p
     return DSHOT_DMA_BUFFER_SIZE;
 }
 
-FAST_CODE uint8_t loadDmaBufferProshot(uint32_t *dmaBuffer, int stride, uint16_t packet)
-{
-    int i;
-    for (i = 0; i < 4; i++) {
-        dmaBuffer[i * stride] = PROSHOT_BASE_SYMBOL + ((packet & 0xF000) >> 12) * PROSHOT_BIT_WIDTH;  // Most significant nibble first
-        packet <<= 4;   // Shift 4 bits
-    }
-    dmaBuffer[i++ * stride] = 0;
-    dmaBuffer[i++ * stride] = 0;
-
-    return PROSHOT_DMA_BUFFER_SIZE;
-}
+//FAST_CODE uint8_t loadDmaBufferProshot(uint32_t *dmaBuffer, int stride, uint16_t packet)
+//{
+//    int i;
+//    for (i = 0; i < 4; i++) {
+//        dmaBuffer[i * stride] = PROSHOT_BASE_SYMBOL + ((packet & 0xF000) >> 12) * PROSHOT_BIT_WIDTH;  // Most significant nibble first
+//        packet <<= 4;   // Shift 4 bits
+//    }
+//    dmaBuffer[i++ * stride] = 0;
+//    dmaBuffer[i++ * stride] = 0;
+//
+//    return PROSHOT_DMA_BUFFER_SIZE;
+//}
 
 uint32_t getDshotHz(motorPwmProtocolTypes_e pwmProtocolType)
 {
@@ -94,50 +94,50 @@ static void dshotPwmShutdown(void)
     return;
 }
 
-static void dshotPwmDisableMotors(void)
-{
-    // No special processing required
-    return;
-}
+//static void dshotPwmDisableMotors(void)
+//{
+//    // No special processing required
+//    return;
+//}
 
-static bool dshotPwmEnableMotors(void)
-{
-    for (int i = 0; i < dshotPwmDevice.count; i++) {
-        motorDmaOutput_t *motor = getMotorDmaOutput(i);
-        const IO_t motorIO = IOGetByTag(motor->timerHardware->tag);
-        IOConfigGPIOAF(motorIO, motor->iocfg, motor->timerHardware->alternateFunction);
-    }
+//static bool dshotPwmEnableMotors(void)
+//{
+//    for (int i = 0; i < dshotPwmDevice.count; i++) {
+//        motorDmaOutput_t *motor = getMotorDmaOutput(i);
+//        const IO_t motorIO = IOGetByTag(motor->timerHardware->tag);
+//        IOConfigGPIOAF(motorIO, motor->iocfg, motor->timerHardware->alternateFunction);
+//    }
+//
+//    // No special processing required
+//    return true;
+//}
 
-    // No special processing required
-    return true;
-}
-
-static bool dshotPwmIsMotorEnabled(uint8_t index)
-{
-    return motors[index].enabled;
-}
+//static bool dshotPwmIsMotorEnabled(uint8_t index)
+//{
+//    return motors[index].enabled;
+//}
 
 static FAST_CODE void dshotWriteInt(uint8_t index, uint16_t value)
 {
-    pwmWriteDshotInt(index, value);
+    //pwmWriteDshotInt(index, value);
 }
 
 static FAST_CODE void dshotWrite(uint8_t index, float value)
 {
-    pwmWriteDshotInt(index, lrintf(value));
+    //pwmWriteDshotInt(index, lrintf(value));
 }
 
 static motorVTable_t dshotPwmVTable = {
     .postInit = motorPostInitNull,
-    .enable = dshotPwmEnableMotors,
-    .disable = dshotPwmDisableMotors,
-    .isMotorEnabled = dshotPwmIsMotorEnabled,
+    //.enable = dshotPwmEnableMotors,
+    //.disable = dshotPwmDisableMotors,
+    //.isMotorEnabled = dshotPwmIsMotorEnabled,
     .updateStart = motorUpdateStartNull, // May be updated after copying
     .write = dshotWrite,
     .writeInt = dshotWriteInt,
-    .updateComplete = pwmCompleteDshotMotorUpdate,
-    .convertExternalToMotor = dshotConvertFromExternal,
-    .convertMotorToExternal = dshotConvertToExternal,
+    //.updateComplete = pwmCompleteDshotMotorUpdate,
+    //.convertExternalToMotor = dshotConvertFromExternal,
+    //.convertMotorToExternal = dshotConvertToExternal,
     .shutdown = dshotPwmShutdown,
 };
 
@@ -145,14 +145,14 @@ FAST_RAM_ZERO_INIT motorDevice_t dshotPwmDevice;
 
 motorDevice_t *dshotPwmDevInit(const motorDevConfig_t *motorConfig, uint16_t idlePulse, uint8_t motorCount, bool useUnsyncedPwm)
 {
-    UNUSED(idlePulse);
-    UNUSED(useUnsyncedPwm);
+//    UNUSED(idlePulse);
+//    UNUSED(useUnsyncedPwm);
 
     dshotPwmDevice.vTable = dshotPwmVTable;
 
     switch (motorConfig->motorPwmProtocol) {
     case PWM_TYPE_PROSHOT1000:
-        loadDmaBuffer = loadDmaBufferProshot;
+        //loadDmaBuffer = loadDmaBufferProshot;
         break;
     case PWM_TYPE_DSHOT600:
     case PWM_TYPE_DSHOT300:
@@ -163,19 +163,21 @@ motorDevice_t *dshotPwmDevInit(const motorDevConfig_t *motorConfig, uint16_t idl
         break;
     }
 
-    for (int motorIndex = 0; motorIndex < MAX_SUPPORTED_MOTORS && motorIndex < motorCount; motorIndex++) {
+    for (int motorIndex = 0; motorIndex < 4; motorIndex++) {
         const ioTag_t tag = motorConfig->ioTags[motorIndex];
         const timerHardware_t *timerHardware = timerAllocate(tag, OWNER_MOTOR, RESOURCE_INDEX(motorIndex));
 
         if (timerHardware != NULL) {
-            motors[motorIndex].io = IOGetByTag(tag);
-            IOInit(motors[motorIndex].io, OWNER_MOTOR, RESOURCE_INDEX(motorIndex));
+            // returns a void pointer (to ioRec_t)
+            //motors[motorIndex].io = IOGetByTag(tag);
+            // sets motor as owner from the gpio
+            //IOInit(motors[motorIndex].io, OWNER_MOTOR, RESOURCE_INDEX(motorIndex));
 
             if (pwmDshotMotorHardwareConfig(timerHardware,
                 motorIndex,
                 motorConfig->motorPwmProtocol,
                 motorConfig->motorPwmInversion ? timerHardware->output ^ TIMER_OUTPUT_INVERTED : timerHardware->output)) {
-                motors[motorIndex].enabled = true;
+                //motors[motorIndex].enabled = true;
 
                 continue;
             }

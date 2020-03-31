@@ -24,24 +24,25 @@
 #include <stdint.h>
 #include <string.h>
 
-#include "platform.h"
+//#include "platform.h"
 
+//#include "common/maths.h"
 
-#include "common/maths.h"
+//#include "config/feature.h"
 
-#include "config/feature.h"
+#include "dshot/dshot.h" // for DSHOT_ constants in initEscEndpoints; may be gone in the future
 
-#include "drivers/dshot.h" // for DSHOT_ constants in initEscEndpoints; may be gone in the future
+#include "dshot/motor.h"
+#include "dshot/drivers/pwm_output.h" // for PWM_TYPE_* and others
+//#include "drivers/time.h"
+//#include "dshot/dshot_bitbang.h"
+#include "dshot/dshot_dpwm.h"
 
-#include "drivers/motor.h"
-#include "drivers/pwm_output.h" // for PWM_TYPE_* and others
-#include "drivers/time.h"
-#include "drivers/dshot_bitbang.h"
-#include "drivers/dshot_dpwm.h"
-
-#include "fc/rc_controls.h" // for flight3DConfig_t
+//#include "fc/rc_controls.h" // for flight3DConfig_t
 
 #include "pg/motor.h"
+
+#include "dshot/common/common_pre.h"
 
 static FAST_RAM_ZERO_INIT motorDevice_t *motorDevice;
 
@@ -51,7 +52,7 @@ void motorShutdown(void)
     motorDevice->enabled = false;
     motorDevice->motorEnableTimeMs = 0;
     motorDevice->initialized = false;
-    delayMicroseconds(1500);
+    //delayMicroseconds(1500); //MI
 }
 
 void motorWriteAll(float *values)
@@ -70,20 +71,20 @@ int motorCount(void)
 }
 
 // This is not motor generic anymore; should be moved to analog pwm module
-static void analogInitEndpoints(float outputLimit, float *outputLow, float *outputHigh, float *disarm, float *deadbandMotor3dHigh, float *deadbandMotor3dLow) {
-    if (featureIsEnabled(FEATURE_3D)) {
-        float outputLimitOffset = (flight3DConfig()->limit3d_high - flight3DConfig()->limit3d_low) * (1 - outputLimit) / 2;
-        *disarm = flight3DConfig()->neutral3d;
-        *outputLow = flight3DConfig()->limit3d_low + outputLimitOffset;
-        *outputHigh = flight3DConfig()->limit3d_high - outputLimitOffset;
-        *deadbandMotor3dHigh = flight3DConfig()->deadband3d_high;
-        *deadbandMotor3dLow = flight3DConfig()->deadband3d_low;
-    } else {
-        *disarm = motorConfig()->mincommand;
-        *outputLow = motorConfig()->minthrottle;
-        *outputHigh = motorConfig()->maxthrottle - ((motorConfig()->maxthrottle - motorConfig()->minthrottle) * (1 - outputLimit));
-    }
-}
+//static void analogInitEndpoints(float outputLimit, float *outputLow, float *outputHigh, float *disarm, float *deadbandMotor3dHigh, float *deadbandMotor3dLow) {
+////    if (featureIsEnabled(FEATURE_3D)) {
+////        float outputLimitOffset = (flight3DConfig()->limit3d_high - flight3DConfig()->limit3d_low) * (1 - outputLimit) / 2;
+////        *disarm = flight3DConfig()->neutral3d;
+////        *outputLow = flight3DConfig()->limit3d_low + outputLimitOffset;
+////        *outputHigh = flight3DConfig()->limit3d_high - outputLimitOffset;
+////        *deadbandMotor3dHigh = flight3DConfig()->deadband3d_high;
+////        *deadbandMotor3dLow = flight3DConfig()->deadband3d_low;
+////    } else {
+//        *disarm = motorConfig()->mincommand;
+//        *outputLow = motorConfig()->minthrottle;
+//        *outputHigh = motorConfig()->maxthrottle - ((motorConfig()->maxthrottle - motorConfig()->minthrottle) * (1 - outputLimit));
+////    }
+//}
 
 // End point initialization is called from mixerInit before motorDevInit; can't use vtable...
 void motorInitEndpoints(float outputLimit, float *outputLow, float *outputHigh, float *disarm, float *deadbandMotor3dHigh, float *deadbandMotor3dLow)
@@ -96,7 +97,6 @@ void motorInitEndpoints(float outputLimit, float *outputLow, float *outputHigh, 
         dshotInitEndpoints(outputLimit, outputLow, outputHigh, disarm, deadbandMotor3dHigh, deadbandMotor3dLow);
         break;
     default:
-        analogInitEndpoints(outputLimit, outputLow, outputHigh, disarm, deadbandMotor3dHigh, deadbandMotor3dLow);
         break;
     }
 }
@@ -133,7 +133,7 @@ static void motorDisableNull(void)
 
 static bool motorIsEnabledNull(uint8_t index)
 {
-    UNUSED(index);
+    //UNUSED(index);
 
     return false;
 }
@@ -145,14 +145,14 @@ bool motorUpdateStartNull(void)
 
 void motorWriteNull(uint8_t index, float value)
 {
-    UNUSED(index);
-    UNUSED(value);
+//    UNUSED(index);
+//    UNUSED(value);
 }
 
 static void motorWriteIntNull(uint8_t index, uint16_t value)
 {
-    UNUSED(index);
-    UNUSED(value);
+//    UNUSED(index);
+//    UNUSED(value);
 }
 
 void motorUpdateCompleteNull(void)
@@ -165,13 +165,13 @@ static void motorShutdownNull(void)
 
 static float motorConvertFromExternalNull(uint16_t value)
 {
-    UNUSED(value);
+//    UNUSED(value);
     return 0.0f ;
 }
 
 static uint16_t motorConvertToExternalNull(float value)
 {
-    UNUSED(value);
+//    UNUSED(value);
     return 0;
 }
 
@@ -195,7 +195,7 @@ static motorDevice_t motorNullDevice = {
 };
 
 void motorDevInit(const motorDevConfig_t *motorConfig, uint16_t idlePulse, uint8_t motorCount) {
-    memset(motors, 0, sizeof(motors));
+    //memset(motors, 0, sizeof(motors));
 
     bool useUnsyncedPwm = motorConfig->useUnsyncedPwm;
 
@@ -206,17 +206,14 @@ void motorDevInit(const motorDevConfig_t *motorConfig, uint16_t idlePulse, uint8
     case PWM_TYPE_ONESHOT42:
     case PWM_TYPE_MULTISHOT:
     case PWM_TYPE_BRUSHED:
-        motorDevice = motorPwmDevInit(motorConfig, idlePulse, motorCount, useUnsyncedPwm);
+        //motorDevice = motorPwmDevInit(motorConfig, idlePulse, motorCount, useUnsyncedPwm);
         break;
 
     case PWM_TYPE_DSHOT150:
     case PWM_TYPE_DSHOT300:
     case PWM_TYPE_DSHOT600:
     case PWM_TYPE_PROSHOT1000:
-        {
-            motorDevice = dshotPwmDevInit(motorConfig, idlePulse, motorCount, useUnsyncedPwm);
-        }
-
+        motorDevice = dshotPwmDevInit(motorConfig, idlePulse, motorCount, useUnsyncedPwm);
         isDshot = true;
         break;
     }
@@ -243,7 +240,7 @@ void motorEnable(void)
 {
     if (motorDevice->initialized && motorDevice->vTable.enable()) {
         motorDevice->enabled = true;
-        motorDevice->motorEnableTimeMs = millis();
+        //motorDevice->motorEnableTimeMs = millis();
     }
 }
 

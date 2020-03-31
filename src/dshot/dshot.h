@@ -20,7 +20,7 @@
 
 #pragma once
 
-#include "common/time.h"
+//#include "common/time.h"
 
 #define DSHOT_MIN_THROTTLE       48
 #define DSHOT_MAX_THROTTLE     2047
@@ -29,8 +29,6 @@
 #define MIN_GCR_EDGES         7
 #define MAX_GCR_EDGES         22
 
-// comment out to see frame dump of corrupted frames in dshot_telemetry_info
-//#define DEBUG_BBDECODE
 
 typedef struct dshotProtocolControl_s {
     uint16_t value;

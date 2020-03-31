@@ -546,10 +546,10 @@ const MotorPerifDef* motorMapDefaultBrushed[NBR_OF_MOTORS] =
 
 /**
  * Brushless motors mapped as on the Big-Quad deck
- * M1 -> TX2
- * M2 -> IO3
- * M3 -> IO2
- * M4 -> RX2
+ * M1 -> TX2, PA2 (TIM5_CH3 / TIM9_CH1 / TIM2_CH3)
+ * M2 -> IO3, PB4 (TIM3_CH1)
+ * M3 -> IO2, PB5 (TIM3_CH2)
+ * M4 -> RX2, PA3 (TIM5_CH4 / TIM9_CH2 / TIM2_CH4)
  */
 const MotorPerifDef* motorMapBigQuadDeck[NBR_OF_MOTORS] =
 {

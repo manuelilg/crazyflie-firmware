@@ -61,4 +61,18 @@ typedef struct motorConfig_s {
     uint8_t motorPoleCount;                // Magnetic poles in the motors for calculating actual RPM from eRPM provided by ESC telemetry
 } motorConfig_t;
 
-//PG_DECLARE(motorConfig_t, motorConfig); //MI
+//PG_DECLARE(motorConfig_t, motorConfig);
+
+/*
+#define PG_DECLARE(_type, _name)                                        \
+    extern _type _name ## _System;                                      \
+    extern _type _name ## _Copy;                                        \
+    static inline const _type* _name(void) { return &_name ## _System; }\
+    static inline _type* _name ## Mutable(void) { return &_name ## _System; }\
+    struct _dummy                                                       \
+*/
+
+extern motorConfig_t motorConfig_System;
+extern motorConfig_t motorConfig_Copy;
+static inline const motorConfig_t* motorConfig(void) { return &motorConfig_System; }
+static inline motorConfig_t* motorConfigMutable(void) { return &motorConfig_System; }

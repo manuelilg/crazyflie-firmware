@@ -23,7 +23,7 @@ typedef DMA_Stream_TypeDef dmaStream_t;
 
 extern FAST_RAM_ZERO_INIT uint8_t dmaMotorTimerCount;
 extern motorDmaTimer_t dmaMotorTimers[MAX_DMA_TIMERS];
-extern motorDmaOutput_t dmaMotors[MAX_SUPPORTED_MOTORS];
+extern motorDmaOutput_t dmaMotors[4/*MAX_SUPPORTED_MOTORS*/];
 
 extern uint32_t readDoneCount;
 

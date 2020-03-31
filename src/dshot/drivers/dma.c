@@ -25,8 +25,11 @@
 #include "platform.h"
 
 
-#include "drivers/nvic.h"
-#include "dma.h"
+#include "dshot/drivers/nvic.h"
+#include "dshot/drivers/dma.h"
+
+//MI
+#include "dshot/drivers/timer_def.h"
 
 /*
  * DMA descriptors.
@@ -72,7 +75,7 @@ uint32_t dmaFlag_IT_TCIF(const dmaResource_t *channel)
     return 0;
 }
 
-#define DMA_RCC(x) ((x) == DMA1 ? RCC_AHBPeriph_DMA1 : RCC_AHBPeriph_DMA2)
+#define DMA_RCC(x) ((x) == DMA1 ? RCC_AHBPeriph_DMA1 : 0)
 void dmaInit(dmaIdentifier_e identifier, resourceOwner_e owner, uint8_t resourceIndex)
 {
     const int index = DMA_IDENTIFIER_TO_INDEX(identifier);

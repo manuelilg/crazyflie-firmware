@@ -64,6 +64,7 @@ VPATH += $(LIB)/STM32_USB_Device_Library/Core/src
 VPATH += $(LIB)/STM32_USB_OTG_Driver/src
 VPATH += $(CRAZYFLIE_BASE)/src/deck/api $(CRAZYFLIE_BASE)/src/deck/core $(CRAZYFLIE_BASE)/src/deck/drivers/src $(CRAZYFLIE_BASE)/src/deck/drivers/src/test
 VPATH += $(CRAZYFLIE_BASE)/src/utils/src/tdoa $(CRAZYFLIE_BASE)/src/utils/src/lighthouse
+VPATH += $(CRAZYFLIE_BASE)/src/dshot $(CRAZYFLIE_BASE)/src/dshot/drivers
 CRT0 = startup_stm32f40xx.o system_stm32f4xx.o
 
 # Add ST lib object files
@@ -207,6 +208,21 @@ PROJ_OBJ += activeMarkerDeck.o
 
 #dshot
 PROJ_OBJ += dshot_main.o
+PROJ_OBJ += motor.o
+PROJ_OBJ += dma_stm32f4xx.o
+//PROJ_OBJ += dma.o // not used in betaflight
+//PROJ_OBJ += pwm_output.o
+//PROJ_OBJ += pwm_output_dshot_hal.o
+PROJ_OBJ += pwm_output_dshot.o
+PROJ_OBJ += pwm_output_dshot_shared.o
+//PROJ_OBJ += resources.o
+PROJ_OBJ += timer_common.o
+//PROJ_OBJ += timer.o
+//PROJ_OBJ += timer_hal.o
+//PROJ_OBJ += timer_stm32f4xx.o
+//PROJ_OBJ += dshot.o
+//PROJ_OBJ += dshot_command.o
+PROJ_OBJ += dshot_dpwm.o
 
 ifeq ($(LPS_TDOA_ENABLE), 1)
 CFLAGS += -DLPS_TDOA_ENABLE
@@ -293,7 +309,8 @@ ifeq ($(DEBUG), 1)
   CFLAGS += -Wconversion
 else
 	# Fail on warnings
-  CFLAGS += -Os -g3 -Werror
+  #CFLAGS += -Os -g3 -Werror
+  CFLAGS += -Os -g3 -Wno-address-of-packed-member
 endif
 
 ifeq ($(LTO), 1)
