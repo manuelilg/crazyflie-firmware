@@ -29,3 +29,9 @@ current_platform.mk
 
 /docs/.jekyll-metadata
 docs/.jekyll-cache
+
+# compiler
+/tools/gcc-arm-none-eabi-8-2019-q3-update
+
+# ide
+/.idea
