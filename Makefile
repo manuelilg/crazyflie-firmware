@@ -5,6 +5,9 @@
 
 CRAZYFLIE_BASE ?= ./
 
+# Added by MILG (use with make print-VARIABLE)
+print-%  : ; @echo $* = $($*)
+
 # Put your personal build config in tools/make/config.mk and DO NOT COMMIT IT!
 # Make a copy of tools/make/config.mk.example to get you started
 -include tools/make/config.mk
@@ -13,13 +16,15 @@ CFLAGS += $(EXTRA_CFLAGS)
 
 ######### JTAG and environment configuration ##########
 OPENOCD           ?= openocd
-OPENOCD_INTERFACE ?= interface/stlink-v2.cfg
+#OPENOCD_INTERFACE ?= interface/stlink-v2.cfg
+OPENOCD_INTERFACE ?= interface/stlink-v2-1.cfg
 OPENOCD_CMDS      ?=
 CROSS_COMPILE     ?= arm-none-eabi-
 PYTHON2           ?= python2
 DFU_UTIL          ?= dfu-util
-CLOAD             ?= 1
-DEBUG             ?= 0
+CLOAD             ?= 0
+#MILG DEBUG changed to 1
+DEBUG             ?= 1
 CLOAD_SCRIPT      ?= python3 -m cfloader
 CLOAD_CMDS        ?=
 CLOAD_ARGS        ?=
@@ -55,8 +60,8 @@ PORT = $(FREERTOS)/portable/GCC/ARM_CM4F
 LINKER_DIR = $(CRAZYFLIE_BASE)/tools/make/F405/linker
 ST_OBJ_DIR  = $(CRAZYFLIE_BASE)/tools/make/F405
 
-OPENOCD_TARGET    ?= target/stm32f4x_stlink.cfg
-
+#OPENOCD_TARGET    ?= target/stm32f4x_stlink.cfg
+OPENOCD_TARGET    ?= target/stm32f4x.cfg
 
 # St Lib
 VPATH += $(LIB)/CMSIS/STM32F4xx/Source/
@@ -208,21 +213,22 @@ PROJ_OBJ += activeMarkerDeck.o
 
 #dshot
 PROJ_OBJ += dshot_main.o
-PROJ_OBJ += motor.o
-PROJ_OBJ += dma_stm32f4xx.o
-//PROJ_OBJ += dma.o // not used in betaflight
-//PROJ_OBJ += pwm_output.o
-//PROJ_OBJ += pwm_output_dshot_hal.o
-PROJ_OBJ += pwm_output_dshot.o
-PROJ_OBJ += pwm_output_dshot_shared.o
-//PROJ_OBJ += resources.o
-PROJ_OBJ += timer_common.o
-//PROJ_OBJ += timer.o
-//PROJ_OBJ += timer_hal.o
-//PROJ_OBJ += timer_stm32f4xx.o
-//PROJ_OBJ += dshot.o
-//PROJ_OBJ += dshot_command.o
-PROJ_OBJ += dshot_dpwm.o
+#PROJ_OBJ += dshot_main2.o
+#PROJ_OBJ += motor.o
+#PROJ_OBJ += dma_stm32f4xx.o
+#PROJ_OBJ += dma.o // not used in betaflight
+#PROJ_OBJ += pwm_output.o
+#PROJ_OBJ += pwm_output_dshot_hal.o
+#PROJ_OBJ += pwm_output_dshot.o
+#PROJ_OBJ += pwm_output_dshot_shared.o
+#PROJ_OBJ += resources.o
+#PROJ_OBJ += timer_common.o
+#PROJ_OBJ += timer.o
+#PROJ_OBJ += timer_hal.o
+#PROJ_OBJ += timer_stm32f4xx.o
+#PROJ_OBJ += dshot.o
+#PROJ_OBJ += dshot_command.o
+#PROJ_OBJ += dshot_dpwm.o
 
 ifeq ($(LPS_TDOA_ENABLE), 1)
 CFLAGS += -DLPS_TDOA_ENABLE
@@ -304,7 +310,9 @@ INCLUDES += -I$(LIB)/vl53l1
 INCLUDES += -I$(LIB)/vl53l1/core/inc
 
 ifeq ($(DEBUG), 1)
-  CFLAGS += -O0 -g3 -DDEBUG
+  #CFLAGS += -O0 -g3 -DDEBUG
+  #MILG
+  CFLAGS += -Og -DDEBUG -ggdb3
   # Prevent silent errors when converting between types (requires explicit casting)
   CFLAGS += -Wconversion
 else
@@ -374,6 +382,8 @@ build:
 	@$(MAKE) --no-print-directory compile CRAZYFLIE_BASE=$(CRAZYFLIE_BASE)
 	@$(MAKE) --no-print-directory print_version CRAZYFLIE_BASE=$(CRAZYFLIE_BASE)
 	@$(MAKE) --no-print-directory size CRAZYFLIE_BASE=$(CRAZYFLIE_BASE)
+	@$(MAKE) print-DEBUG
+	@$(MAKE) print-CFLAGS
 compile: $(PROG).hex $(PROG).bin $(PROG).dfu
 
 bin/:

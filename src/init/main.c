@@ -39,24 +39,26 @@
 
 #include "led.h"
 
+#include "dshot/dshot_main.h"
+
 /* ST includes */
 #include "stm32fxxx.h"
 
-#include "dshot_main.h"
-
 int main() 
 {
-  //Initialize the platform.
-  int err = platformInit();
-  if (err != 0) {
-    // The firmware is running on the wrong hardware. Halt
-    while(1);
+    init_dshot();
+    //Initialize the platform.
+    int err = platformInit();
+    if (err != 0) {
+      // The firmware is running on the wrong hardware. Halt
+      while(1);
   }
 
-  //Launch the system task that will initialize and start everything
-  systemLaunch();
 
-  init_dshot();
+
+    //Launch the system task that will initialize and start everything
+    systemLaunch();
+
 
   //Start the FreeRTOS scheduler
   vTaskStartScheduler();

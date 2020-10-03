@@ -21,14 +21,25 @@
 #include "platform.h"
 
 
-#include "common/utils.h"
+//#include "common/utils.h"
 
-#include "drivers/dma.h"
-#include "drivers/io.h"
+//#include "drivers/dma.h"
+//#include "drivers/io.h"
 #include "drivers/timer_def.h"
 
 #include "stm32f4xx.h"
-#include "rcc.h"
+//#include "rcc.h"
+enum rcc_reg {
+    RCC_EMPTY = 0,
+    RCC_AHB,
+    RCC_APB2,
+    RCC_APB1,
+    RCC_AHB1,
+};
+#define RCC_ENCODE(reg, mask) (((reg) << 5) | LOG2_32BIT(mask))
+#define RCC_APB1(periph) RCC_ENCODE(RCC_APB1, RCC_APB1ENR_ ## periph ## EN)
+#define RCC_APB2(periph) RCC_ENCODE(RCC_APB2, RCC_APB2ENR_ ## periph ## EN)
+
 #include "timer.h"
 
 
@@ -45,6 +56,7 @@ const timerDef_t timerDefinitions[HARDWARE_TIMER_DEFINITION_COUNT] = {
     { .TIMx = TIM11, .rcc = RCC_APB2(TIM11), .inputIrq = TIM1_TRG_COM_TIM11_IRQn},
 };
 
+/*
 #if defined(USE_TIMER_MGMT)
 const timerHardware_t fullTimerHardware[FULL_TIMER_CHANNEL_COUNT] = {
     // Auto-generated from 'timer_def.h'
@@ -146,7 +158,7 @@ const timerHardware_t fullTimerHardware[FULL_TIMER_CHANNEL_COUNT] = {
 //    DEF_TIM(TIM8, CH3, PI7, TIM_USE_ANY, 0, 0),
 //#endif
 };
-
+/*
 
 /*
     need a mapping from dma and timers to pins, and the values should all be set here to the dmaMotors array.
