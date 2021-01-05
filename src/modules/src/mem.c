@@ -84,9 +84,10 @@
 #define TESTER_ID       0x06
 #define USD_ID          0x07
 #define LEDTIMINGSMEM_ID       0x08
+#define LOCO_DIST_ID       0x09
 // OW_FIRST_ID must be the last and highest ID,
 // insert new IDs above
-#define OW_FIRST_ID     0x09
+#define OW_FIRST_ID     0x0A
 
 #define STATUS_OK 0
 
@@ -100,6 +101,7 @@
 #define MEM_TYPE_TESTER 0x15
 #define MEM_TYPE_USD    0x16
 #define MEM_TYPE_LEDMEM 0x17
+#define MEM_TYPE_LOCODIST 0x18
 
 #define MEM_LOCO_INFO             0x0000
 #define MEM_LOCO_ANCHOR_BASE      0x1000
@@ -144,6 +146,7 @@ static uint8_t memTesterWriteReset = 0;
 static uint8_t handleUsdMemRead(uint32_t memAddr, uint8_t readLen, uint8_t* startOfData);
 static uint8_t handleOneWireMemRead(uint8_t memId, uint32_t memAddr, uint8_t readLen, uint8_t* startOfData);
 static uint8_t handleOneWireMemWrite(uint8_t memId, uint32_t memAddr, uint8_t writeLen, uint8_t* startOfData);
+static uint8_t handleLocoDistanceMemRead(uint32_t memAddr, uint8_t writeLen, uint8_t* dest);
 
 static bool isInit = false;
 
@@ -264,6 +267,9 @@ static void createInfoResponse(CRTPPacket* p, uint8_t memId) {
     case USD_ID:
       createInfoResponseBody(p, MEM_TYPE_USD, usddeckFileSize(), noData);
       break;
+    case LOCO_DIST_ID:
+      createInfoResponseBody(p, MEM_TYPE_LOCODIST, 6, noData);
+      break;
     default:
       if (owGetinfo(memId - OW_FIRST_ID, &serialNbr)) {
         createInfoResponseBody(p, MEM_TYPE_OW, OW_MAX_SIZE, serialNbr.data);
@@ -333,6 +339,10 @@ static void memReadProcess(CRTPPacket* p) {
 
     case USD_ID:
       status = handleUsdMemRead(memAddr, readLen, startOfData);
+      break;
+
+    case LOCO_DIST_ID:
+      status = handleLocoDistanceMemRead(memAddr, readLen, startOfData);
       break;
 
     default:
@@ -507,9 +517,11 @@ static void memWriteProcess(CRTPPacket* p) {
     case LOCO_ID:
         // Not supported, fall through
     case LOCO2_ID:
-      // Not supported
-      status = EIO;
-      break;
+        // Not supported, fall through
+    case LOCO_DIST_ID:
+        // Not supported
+        status = EIO;
+        break;
 
     default:
       status = handleOneWireMemWrite(memId, memAddr, writeLen, startOfData);
@@ -733,6 +745,23 @@ static uint8_t handleOneWireMemWrite(uint8_t memId, uint32_t memAddr, uint8_t wr
   }
 
   return status;
+}
+
+static uint8_t handleLocoDistanceMemRead(uint32_t memAddr, uint8_t readLen, uint8_t* dest) {
+    uint8_t status = EIO;
+    if (memAddr == 0) {
+        dest[0] = anchor1;
+        dest[1] = anchor2;
+        uint16_t* destAsUint16 = (uint16_t *)(dest + 2);
+        *destAsUint16 = distanceBetweenAnchors;
+        ++destAsUint16;
+        *destAsUint16 = distanceToAnchor;
+        distanceToAnchor = 0;
+
+        status = STATUS_OK;
+    }
+
+    return status;
 }
 
 PARAM_GROUP_START(memTst)

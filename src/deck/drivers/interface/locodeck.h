@@ -123,10 +123,19 @@ void locoDeckSetRangingState(const uint16_t newState);
 
 #define LPP_SHORT_ANCHORPOS 0x01
 
+#define LPP_SHORT_RANGING_JOB_START 0x06
+#define LPP_SHORT_RANGING_JOB_RESULT 0x07
+
+
 struct lppShortAnchorPos_s {
   float x;
   float y;
   float z;
 } __attribute__((packed));
+
+uint8_t anchor1;
+uint8_t anchor2;
+uint16_t distanceBetweenAnchors;
+uint16_t distanceToAnchor;
 
 #endif // __LOCODECK_H__

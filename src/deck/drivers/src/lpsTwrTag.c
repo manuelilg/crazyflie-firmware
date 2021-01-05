@@ -129,6 +129,7 @@ static bool ranging_complete = false;
 static bool lpp_transaction = false;
 
 static lpsLppShortPacket_t lppShortPacket;
+static uint8_t lastLppType;
 
 // TDMA handling
 static bool tdmaSynchronized;
@@ -154,7 +155,6 @@ static void txcallback(dwDevice_t *dev)
   }
 }
 
-
 static uint32_t rxcallback(dwDevice_t *dev) {
   dwTime_t arival = { .full=0 };
   int dataLength = dwGetDataLength(dev);
@@ -163,7 +163,6 @@ static uint32_t rxcallback(dwDevice_t *dev) {
 
   packet_t rxPacket;
   memset(&rxPacket, 0, MAC802154_HEADER_LENGTH);
-
   dwGetData(dev, (uint8_t*)&rxPacket, dataLength);
 
   if (rxPacket.destAddress != options->tagAddress) {
@@ -238,6 +237,10 @@ static uint32_t rxcallback(dwDevice_t *dev) {
       state.distance[current_anchor] = SPEED_OF_LIGHT * tprop;
       state.pressures[current_anchor] = report->asl;
 
+      if (current_anchor == anchor2) {
+          distanceToAnchor = (uint16_t) (1000 * state.distance[current_anchor]);
+      }
+
       // Outliers rejection
       rangingStats[current_anchor].ptr = (rangingStats[current_anchor].ptr + 1) % RANGING_HISTORY_LENGTH;
       float32_t mean;
@@ -274,6 +277,23 @@ static uint32_t rxcallback(dwDevice_t *dev) {
 
       return 0;
       break;
+    }
+    case LPS_TWR_LPP_SHORT: {
+        switch(rxPacket.payload[1]) {
+            case LPP_SHORT_RANGING_JOB_RESULT:
+                anchor1 =  (uint8_t) (rxPacket.sourceAddress & 0xFF);
+                anchor2 = rxPacket.payload[2];
+                distanceBetweenAnchors = *((uint16_t*) (rxPacket.payload+3));
+
+                //lpp_transaction = false;
+                break;
+        }
+
+        //dwNewReceive(dev);
+        //dwSetDefaults(dev);
+        //dwStartReceive(dev);
+
+        return 0;
     }
   }
   return MAX_TIMEOUT;
@@ -349,8 +369,16 @@ static void sendLppShort(dwDevice_t *dev, lpsLppShortPacket_t *packet)
   dwNewTransmit(dev);
   dwSetDefaults(dev);
   dwSetData(dev, (uint8_t*)&txPacket, MAC802154_HEADER_LENGTH+1+packet->length);
+  lastLppType = packet->data[0];
 
-  dwWaitForResponse(dev, false);
+  if (lastLppType == LPP_SHORT_RANGING_JOB_START) {
+      //anchor1 = 111;
+      dwWaitForResponse(dev, true);
+  }
+  else {
+      //anchor1 = 113;
+      dwWaitForResponse(dev, false);
+  }
   dwStartTransmit(dev);
 }
 
@@ -368,9 +396,19 @@ static uint32_t twrTagOnEvent(dwDevice_t *dev, uwbEvent_t event)
       break;
     case eventPacketSent:
       txcallback(dev);
-
+      //anchor2 = lpp_transaction ? 1 : 0;
       if (lpp_transaction) {
-        return 0;
+        if (lastLppType == LPP_SHORT_RANGING_JOB_START) {
+          distanceBetweenAnchors = 0;
+
+          //dwNewReceive(dev);
+          //dwSetDefaults(dev);
+          //dwStartReceive(dev);
+          return MAX_TIMEOUT;
+        }
+        else {
+          return 0;
+        }
       }
       return MAX_TIMEOUT;
       break;
@@ -413,26 +451,38 @@ static uint32_t twrTagOnEvent(dwDevice_t *dev, uwbEvent_t event)
         }
       }
 
-
       if (lpsGetLppShort(&lppShortPacket)) {
         lpp_transaction = true;
         sendLppShort(dev, &lppShortPacket);
       } else {
+      //} else if (!lpp_transaction) {
+        if (lpp_transaction == true && distanceBetweenAnchors != 0) {
+            //distance = 0xFFFF;
+        }
         lpp_transaction = false;
         ranging_complete = false;
         initiateRanging(dev);
       }
+      //anchor2 = lpp_transaction ? 1 : 0;
       return MAX_TIMEOUT;
       break;
     case eventReceiveTimeout:
     case eventReceiveFailed:
-      return 0;
+        //anchor2 = lpp_transaction ? 1 : 0;
+        if (lpp_transaction) {
+            dwNewReceive(dev);
+            dwSetDefaults(dev);
+            dwStartReceive(dev);
+            return 100;
+        }
+          return 0;
       break;
     default:
       configASSERT(false);
   }
 
-  return MAX_TIMEOUT;
+    //anchor2 = lpp_transaction ? 1 : 0;
+    return MAX_TIMEOUT;
 }
 
 // Loco Posisioning Protocol (LPP) handling
@@ -497,6 +547,11 @@ static void twrTagInit(dwDevice_t *dev)
 
   dwCommitConfiguration(dev);
 
+  anchor1 = 0;
+  anchor2 = 0;
+  distanceBetweenAnchors = 0;
+  distanceToAnchor = 0;
+
   rangingOk = false;
 }
 
@@ -508,6 +563,7 @@ static bool isRangingOk()
 void uwbTwrTagSetOptions(lpsTwrAlgoOptions_t* newOptions) {
   options = newOptions;
 }
+
 
 float lpsTwrTagGetDistance(const uint8_t anchorId) {
   return state.distance[anchorId];
