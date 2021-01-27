@@ -36,6 +36,8 @@
 #include "pm.h"
 #include "debug.h"
 
+#include "dshot_main.h"
+
 //FreeRTOS includes
 #include "task.h"
 
@@ -106,6 +108,7 @@ void motorsInit(const MotorPerifDef** motorMapSelect)
 
   if (motorMap[0]->drvType == NONE)
   {
+      init_dshot();
       isInit = true;
       return;
   }
@@ -258,6 +261,14 @@ void motorsSetRatio(uint32_t id, uint16_t ithrust)
     else
     {
       thrustCache[id] = ithrust;
+
+      // map from 0-65536 to 48 - 2047
+      const uint16_t dshotRatio = ((((uint32_t) ithrust) * (2047U - 48U)) >> 16) + 48U; // thrust * (2047 - 48) / 65536 + 48
+      pwmWriteDshotInt(id, dshotRatio); // 48 - 2047
+
+      if (id == MOTOR_M4) {
+        pwmCompleteDshotMotorUpdate();
+      }
     }
   }
 }

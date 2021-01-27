@@ -46,19 +46,15 @@
 
 int main() 
 {
-    init_dshot();
-    //Initialize the platform.
-    int err = platformInit();
-    if (err != 0) {
-      // The firmware is running on the wrong hardware. Halt
-      while(1);
+  //Initialize the platform.
+  int err = platformInit();
+  if (err != 0) {
+    // The firmware is running on the wrong hardware. Halt
+    while(1);
   }
 
-
-
-    //Launch the system task that will initialize and start everything
-    systemLaunch();
-
+  //Launch the system task that will initialize and start everything
+  systemLaunch();
 
   //Start the FreeRTOS scheduler
   vTaskStartScheduler();
