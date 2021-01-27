@@ -4,8 +4,19 @@
 
 #include "dshot/dshot_main.h"
 
+#include "FreeRTOS.h"
+#include "semphr.h"
+#include "i2c_drv.h"
+
 #include <math.h>
 
+// forward declaration
+void setupDma1Stream2Channel5();
+
+DMA_Stream_TypeDef* const dmaTim2 = DMA1_Stream1; //TODO check this
+//uint16_t dmaBurstLengthStream7;
+DMA_Stream_TypeDef* const dmaTim3 = DMA1_Stream2; //TODO check this
+//uint16_t dmaBurstLengthStream2;
 
 void init_dshot() {
     /// GPIO
@@ -51,8 +62,8 @@ void init_dshot() {
 
     TIM_Cmd(TIM2, DISABLE);
     TIM_Cmd(TIM3, DISABLE);
-    //TIM_DeInit(TIM2);
-    //TIM_DeInit(TIM3);
+    TIM_DeInit(TIM2);
+    TIM_DeInit(TIM3);
 
     TIM_TimeBaseInitTypeDef timInit;
     TIM_TimeBaseStructInit(&timInit);
@@ -81,9 +92,9 @@ void init_dshot() {
     /// DMA
     // dmaBurstRef = dmaRef
     // S1-CH3: TIM2_UP, S7-CH3: TIM2_UP
-    DMA_Stream_TypeDef* dmaTim2 = DMA1_Stream7; //TODO check this
+    //DMA_Stream_TypeDef* dmaTim2 = DMA1_Stream7; //TODO check this
     // S2-CH5: TIM3_UP
-    DMA_Stream_TypeDef* dmaTim3 = DMA1_Stream2; //TODO check this
+    //DMA_Stream_TypeDef* dmaTim3 = DMA1_Stream2; //TODO check this
 
     DMA_Cmd(dmaTim2, DISABLE);
     DMA_Cmd(dmaTim3, DISABLE);
@@ -129,15 +140,15 @@ void init_dshot() {
 
     // TIM2 Stream1 Channel 3
     dmaInitStruct.DMA_Channel = DMA_Channel_3;
-    //dmaInitStruct.DMA_Memory0BaseAddr = 0; // TODO (uint32_t)motor->timer->dmaBurstBuffer;
-    dmaInitStruct.DMA_Memory0BaseAddr = 0xABABABAB;
+    dmaInitStruct.DMA_Memory0BaseAddr = (uint32_t)dshotBurstDmaBuffer[0]; // TODO (uint32_t)motor->timer->dmaBurstBuffer;
+    //dmaInitStruct.DMA_Memory0BaseAddr = 0xABABABAB;
     dmaInitStruct.DMA_PeripheralBaseAddr = (uint32_t)(&(TIM2->DMAR));
     DMA_Init(dmaTim2, &dmaInitStruct);
 
     // TIM3 Stream2 Channel 5
     dmaInitStruct.DMA_Channel = DMA_Channel_5;
-    //dmaInitStruct.DMA_Memory0BaseAddr = 0; // TODO (uint32_t)motor->timer->dmaBurstBuffer;
-    dmaInitStruct.DMA_Memory0BaseAddr = 0xCDCDCDCD;
+    dmaInitStruct.DMA_Memory0BaseAddr = (uint32_t)dshotBurstDmaBuffer[1]; // TODO (uint32_t)motor->timer->dmaBurstBuffer;
+    //dmaInitStruct.DMA_Memory0BaseAddr = 0xCDCDCDCD;
     dmaInitStruct.DMA_PeripheralBaseAddr = (uint32_t)(&(TIM3->DMAR));
     DMA_Init(dmaTim3, &dmaInitStruct);
 
@@ -190,63 +201,230 @@ static bool dshotPwmEnableMotors(void)
 */
 
 void dshotWrite(uint8_t index, float value) {
-    pwmWriteDshotInt(index, lrintf(value));
+    pwmWriteDshotInt(index, (uint16_t) lrintf(value));
 }
 
 void dshotWriteInt(uint8_t index, uint16_t value) {
     pwmWriteDshotInt(index, value);
 }
 
+//value range 48 - 2047
 void pwmWriteDshotInt(uint8_t index, uint16_t value) {
-    motorDmaOutput_t *const motor = &dmaMotors[index];
+    //motorDmaOutput_t *const motor = &dmaMotors[index];
 
     /*If there is a command ready to go overwrite the value and send that instead*/
-    if (dshotCommandIsProcessing()) {
-        value = dshotCommandGetCurrent(index);
-        if (value) {
-            motor->protocolControl.requestTelemetry = true;
+//    if (dshotCommandIsProcessing()) {
+//        value = dshotCommandGetCurrent(index);
+//        if (value) {
+//            motor->protocolControl.requestTelemetry = true;
+//        }
+//    }
+
+    //motor->protocolControl.value = value;
+    //uint16_t packet = prepareDshotPacket(&motor->protocolControl);
+    uint16_t packet = prepareDshotPacket(value);
+    //uint8_t bufferSize;
+
+    //if (useBurstDshot) {
+        //bufferSize = loadDmaBuffer(&motor->timer->dmaBurstBuffer[timerLookupChannelIndex(motor->timerHardware->channel)], 4, packet);
+        //bufferSize = loadDmaBufferDshot(&dshotBurstDmaBuffer[1][index], 4, packet);
+
+        uint32_t* dmaBuffer;
+        switch (index) {
+          case 0:
+            // M1 -> TX2, PA2 (TIM2_CH3)
+            dmaBuffer = &dshotBurstDmaBuffer[0][2];
+            break;
+          case 1:
+            // M2 -> IO3, PB4 (TIM3_CH1)
+            dmaBuffer = &dshotBurstDmaBuffer[1][0];
+            break;
+          case 2:
+            // M3 -> IO2, PB5 (TIM3_CH2)
+            dmaBuffer = &dshotBurstDmaBuffer[1][1];
+            break;
+          case 3:
+            // M4 -> RX2, PA3 (TIM2_CH4)
+            dmaBuffer = &dshotBurstDmaBuffer[0][3];
+            break;
+          default:
+            break;
         }
-    }
+        loadDmaBufferDshot(dmaBuffer, 4, packet);
 
-    motor->protocolControl.value = value;
-    uint16_t packet = prepareDshotPacket(&motor->protocolControl);
-    uint8_t bufferSize;
+        //motor->timer->dmaBurstLength = bufferSize * 4;
+        //dmaBurstLengthStream2 = bufferSize * 4;
+        //TODO where is dmaBurstLength needed
+    //}
+    //else {
+    //    bufferSize = loadDmaBuffer(motor->dmaBuffer, 1, packet);
+    //    motor->timer->timerDmaSources |= motor->timerDmaSource;
+    //    DMA_SetCurrDataCounter((DMA_Stream_TypeDef *)(motor->dmaRef), bufferSize);
+    //    DMA_Cmd((DMA_Stream_TypeDef *)(motor->dmaRef), ENABLE);
+    //}
+}
 
-    if (useBurstDshot) {
-        bufferSize = loadDmaBuffer(&motor->timer->dmaBurstBuffer[timerLookupChannelIndex(motor->timerHardware->channel)], 4, packet);
-        motor->timer->dmaBurstLength = bufferSize * 4;
+#define NVIC_PRIO_DSHOT_DMA                NVIC_BUILD_PRIORITY(2, 1)
+
+uint16_t prepareDshotPacket(uint16_t value) {
+//uint16_t prepareDshotPacket(dshotProtocolControl_t *pcb) {
+    uint16_t packet;
+
+    //ATOMIC_BLOCK(NVIC_PRIO_DSHOT_DMA) {
+            //packet = (pcb->value << 1) | (pcb->requestTelemetry ? 1 : 0);
+            packet = (uint16_t) (value << 1);
+            //pcb->requestTelemetry = false;    // reset telemetry request to make sure it's triggered only once in a row
+    //}
+
+    // compute checksum
+    unsigned csum = 0;
+    unsigned csum_data = packet;
+    for (int i = 0; i < 3; i++) {
+        csum ^=  csum_data;   // xor data by nibbles
+        csum_data >>= 4;
     }
-    else {
-        bufferSize = loadDmaBuffer(motor->dmaBuffer, 1, packet);
-        motor->timer->timerDmaSources |= motor->timerDmaSource;
-        DMA_SetCurrDataCounter((DMA_Stream_TypeDef *)(motor->dmaRef), bufferSize);
-        DMA_Cmd((DMA_Stream_TypeDef *)(motor->dmaRef), ENABLE);
+    // append checksum
+    const uint16_t csum_masked = csum & 0x0f;
+    packet = (uint16_t) (packet << 4) | csum_masked;
+
+    return packet;
+}
+
+#define MOTOR_BIT_0           7
+#define MOTOR_BIT_1           14
+#define MOTOR_BITLENGTH       20
+
+uint8_t loadDmaBufferDshot(uint32_t *dmaBuffer, int stride, uint16_t packet) {
+    int i;
+    for (i = 0; i < 16; i++) {
+        dmaBuffer[i * stride] = (packet & 0x8000) ? MOTOR_BIT_1 : MOTOR_BIT_0;  // MSB first
+        packet <<= 1;
+    }
+    dmaBuffer[i++ * stride] = 0;
+    dmaBuffer[i++ * stride] = 0;
+
+    return DSHOT_DMA_BUFFER_SIZE;
+}
+
+static DMA_Stream_TypeDef* dma[2] = {dmaTim2, dmaTim3};
+static TIM_TypeDef* timers[2] = {TIM2, TIM3};
+
+bool dmaIrqNotCleared;
+bool dmaTimerIrqNotCleared;
+#define I2C_MESSAGE_TIMEOUT     M2T(1000)
+
+void pwmCompleteDshotMotorUpdate(void) {
+//    if (!dshotCommandQueueEmpty()) {
+//        if (!dshotCommandOutputIsEnabled(dshotPwmDevice.count)) {
+//            return;
+//        }
+//    }
+
+
+  xSemaphoreTake(sensorsBus.isBusFreeSemaphore, I2C_MESSAGE_TIMEOUT);
+
+  setupDma1Stream2Channel5();
+
+  dmaIrqNotCleared = true;
+  dmaTimerIrqNotCleared = true;
+
+  //dshotBurstDmaBuffer[0][70] = 3;
+  //dshotBurstDmaBuffer[0][71] = 5;
+  //dshotBurstDmaBuffer[1][68] = 7;
+  //dshotBurstDmaBuffer[1][69] = 11;
+
+  const int dmaMotorTimerCount = 2;
+    for (int i = 0; i < dmaMotorTimerCount; i++) {
+        //if (useBurstDshot) {
+            //DMA_SetCurrDataCounter((DMA_Stream_TypeDef *)(dmaMotorTimers[i].dmaBurstRef), dmaMotorTimers[i].dmaBurstLength);
+            //DMA_SetCurrDataCounter(dmaTim3, DSHOT_DMA_BUFFER_SIZE * 4);
+            DMA_SetCurrDataCounter(dma[i], DSHOT_DMA_BUFFER_SIZE * 4);
+
+            //DMA_Cmd((DMA_Stream_TypeDef *)(dmaMotorTimers[i].dmaBurstRef), ENABLE);
+            //DMA_Cmd(dmaTim3, ENABLE);
+            DMA_Cmd(dma[i], ENABLE);
+
+            //TIM_DMAConfig(dmaMotorTimers[i].timer, ((uint16_t)0x000D), ((uint16_t)0x0300));
+            //TIM_DMAConfig(TIM3, TIM_DMABase_CCR1, TIM_DMABurstLength_4Transfers);
+            TIM_DMAConfig(timers[i], TIM_DMABase_CCR1, TIM_DMABurstLength_4Transfers);
+
+            //TIM_DMACmd(dmaMotorTimers[i].timer, ((uint16_t)0x0100), ENABLE);
+            //TIM_DMACmd(TIM3, TIM_DMA_Update, ENABLE);
+            TIM_DMACmd(timers[i], TIM_DMA_Update, ENABLE);
+
+        //TIM_SetCompare1(TIM3, 7);
+        //TIM_SetCompare2(TIM3, 7);
+
+        //}
+        //else {
+        //    TIM_ARRPreloadConfig(dmaMotorTimers[i].timer, DISABLE);
+        //    dmaMotorTimers[i].timer->ARR = dmaMotorTimers[i].outputPeriod;
+        //    TIM_ARRPreloadConfig(dmaMotorTimers[i].timer, ENABLE);
+        //    TIM_SetCounter(dmaMotorTimers[i].timer, 0);
+        //    TIM_DMACmd(dmaMotorTimers[i].timer, dmaMotorTimers[i].timerDmaSources, ENABLE);
+        //    dmaMotorTimers[i].timerDmaSources = 0;
+        //}
     }
 }
 
-void pwmCompleteDshotMotorUpdate(void) {
-    if (!dshotCommandQueueEmpty()) {
-        if (!dshotCommandOutputIsEnabled(dshotPwmDevice.count)) {
-            return;
-        }
-    }
+void setupDma1Stream2Channel5() {
+  /// DMA
+  // S2-CH5: TIM3_UP
+  //DMA_Stream_TypeDef* dmaTim3 = DMA1_Stream2; //TODO check this
 
-    for (int i = 0; i < dmaMotorTimerCount; i++) {
-        if (useBurstDshot) {
-            DMA_SetCurrDataCounter((DMA_Stream_TypeDef *)(dmaMotorTimers[i].dmaBurstRef), dmaMotorTimers[i].dmaBurstLength);
-            DMA_Cmd((DMA_Stream_TypeDef *)(dmaMotorTimers[i].dmaBurstRef), ENABLE);
-            TIM_DMAConfig(dmaMotorTimers[i].timer, ((uint16_t)0x000D), ((uint16_t)0x0300));
-            TIM_DMACmd(dmaMotorTimers[i].timer, ((uint16_t)0x0100), ENABLE);
-        }
-        else {
-            TIM_ARRPreloadConfig(dmaMotorTimers[i].timer, DISABLE);
-            dmaMotorTimers[i].timer->ARR = dmaMotorTimers[i].outputPeriod;
-            TIM_ARRPreloadConfig(dmaMotorTimers[i].timer, ENABLE);
-            TIM_SetCounter(dmaMotorTimers[i].timer, 0);
-            TIM_DMACmd(dmaMotorTimers[i].timer, dmaMotorTimers[i].timerDmaSources, ENABLE);
-            dmaMotorTimers[i].timerDmaSources = 0;
-        }
+  DMA_Cmd(dmaTim3, DISABLE);
+  DMA_DeInit(dmaTim3);
+
+  DMA_InitTypeDef dmaInitStruct;
+  DMA_StructInit(&dmaInitStruct);
+
+  dmaInitStruct.DMA_DIR = DMA_DIR_MemoryToPeripheral;
+  dmaInitStruct.DMA_FIFOMode = DMA_FIFOMode_Enable;
+  dmaInitStruct.DMA_FIFOThreshold = DMA_FIFOThreshold_Full;
+  dmaInitStruct.DMA_MemoryBurst = DMA_MemoryBurst_Single;
+  dmaInitStruct.DMA_PeripheralBurst = DMA_PeripheralBurst_Single;
+  dmaInitStruct.DMA_BufferSize = 18; // DSHOT_DMA_BUFFER_SIZE
+  dmaInitStruct.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
+  dmaInitStruct.DMA_MemoryInc = DMA_MemoryInc_Enable;
+  dmaInitStruct.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Word;
+  dmaInitStruct.DMA_MemoryDataSize = DMA_MemoryDataSize_Word;
+  dmaInitStruct.DMA_Mode = DMA_Mode_Normal;
+  dmaInitStruct.DMA_Priority = DMA_Priority_High;
+
+  // TIM3 Stream2 Channel 5
+  dmaInitStruct.DMA_Channel = DMA_Channel_5;
+  dmaInitStruct.DMA_Memory0BaseAddr = (uint32_t)dshotBurstDmaBuffer[1]; // TODO (uint32_t)motor->timer->dmaBurstBuffer;
+  //dmaInitStruct.DMA_Memory0BaseAddr = 0xCDCDCDCD;
+  dmaInitStruct.DMA_PeripheralBaseAddr = (uint32_t)(&(TIM3->DMAR));
+  DMA_Init(dmaTim3, &dmaInitStruct);
+
+  DMA_ITConfig(dmaTim3, DMA_IT_TC, ENABLE);
+}
+
+void motor_DMA_IRQHandler() {
+    if (DMA_GetFlagStatus(DMA1_Stream2, DMA_FLAG_TCIF2)) {
+
+        //if (useBurstDshot) {
+            //motorDmaTimer_t *burstDmaTimer = &dmaMotorTimers[descriptor->userParam];
+            DMA_Cmd(DMA1_Stream2, DISABLE);
+            TIM_DMACmd(TIM3, TIM_DMA_Update, DISABLE);
+        //} else
+        //{
+        //    motorDmaOutput_t * const motor = &dmaMotors[descriptor->userParam];
+        //    pwmChannelDMAStop(&motor->TimHandle,motor->timerHardware->channel);
+        //    HAL_DMA_IRQHandler(motor->TimHandle.hdma[motor->timerDmaIndex]);
+        //}
+
+        DMA_ClearFlag(DMA1_Stream2, DMA_FLAG_TCIF2);
     }
+}
+
+void __attribute__((used)) DMA1_Stream1_IRQHandler(void) {
+  if (DMA_GetFlagStatus(DMA1_Stream1, DMA_FLAG_TCIF1)) {
+    DMA_Cmd(DMA1_Stream1, DISABLE);
+    TIM_DMACmd(TIM2, TIM_DMA_Update, DISABLE);
+    DMA_ClearFlag(DMA1_Stream1, DMA_FLAG_TCIF1);
+  }
 }
 
 /*

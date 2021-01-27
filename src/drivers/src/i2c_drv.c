@@ -656,7 +656,40 @@ void __attribute__((used)) I2C3_EV_IRQHandler(void)
   i2cdrvEventIsrHandler(&sensorsBus);
 }
 
+extern bool dmaIrqNotCleared;
+extern bool dmaTimerIrqNotCleared;
+
 void __attribute__((used)) DMA1_Stream2_IRQHandler(void)
 {
-  i2cdrvDmaIsrHandler(&sensorsBus);
+  dmaIrqNotCleared = false;
+  //if (true) {
+  if (sensorsBus.def->i2cPort->CR2 & I2C_CR2_DMAEN) {
+    i2cdrvDmaIsrHandler(&sensorsBus);
+  }
+  else {
+    //TODO call dshot_main motor_DMA_IRQHandler
+    if (DMA_GetFlagStatus(DMA1_Stream2, DMA_FLAG_TCIF2)) {
+      dmaTimerIrqNotCleared = false;
+      DMA_Cmd(DMA1_Stream2, DISABLE);
+      TIM_DMACmd(TIM3, TIM_DMA_Update, DISABLE);
+      DMA_ClearFlag(DMA1_Stream2, DMA_FLAG_TCIF2);
+      //xSemaphoreGive(sensorsBus.isBusFreeMutex);
+      portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
+      xSemaphoreGiveFromISR(sensorsBus.isBusFreeSemaphore, &xHigherPriorityTaskWoken);
+      portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+    }
+    else {
+      while(true) ;
+    }
+  }
+  //
+
+//  const FLASH_Status flag = DMA_GetFlagStatus(DMA1_Stream2, DMA_FLAG_TCIF2);
+//  if (flag == SET) {
+//      DMA_ClearFlag(DMA1_Stream2, DMA_FLAG_TCIF2);
+//      //while(true) ;
+//  }
+
+
+
 }
