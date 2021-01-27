@@ -213,22 +213,6 @@ PROJ_OBJ += activeMarkerDeck.o
 
 #dshot
 PROJ_OBJ += dshot_main.o
-#PROJ_OBJ += dshot_main2.o
-#PROJ_OBJ += motor.o
-#PROJ_OBJ += dma_stm32f4xx.o
-#PROJ_OBJ += dma.o // not used in betaflight
-#PROJ_OBJ += pwm_output.o
-#PROJ_OBJ += pwm_output_dshot_hal.o
-#PROJ_OBJ += pwm_output_dshot.o
-#PROJ_OBJ += pwm_output_dshot_shared.o
-#PROJ_OBJ += resources.o
-#PROJ_OBJ += timer_common.o
-#PROJ_OBJ += timer.o
-#PROJ_OBJ += timer_hal.o
-#PROJ_OBJ += timer_stm32f4xx.o
-#PROJ_OBJ += dshot.o
-#PROJ_OBJ += dshot_command.o
-#PROJ_OBJ += dshot_dpwm.o
 
 ifeq ($(LPS_TDOA_ENABLE), 1)
 CFLAGS += -DLPS_TDOA_ENABLE
