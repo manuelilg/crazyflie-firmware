@@ -104,6 +104,12 @@ void motorsInit(const MotorPerifDef** motorMapSelect)
 
   motorMap = motorMapSelect;
 
+  if (motorMap[0]->drvType == NONE)
+  {
+      isInit = true;
+      return;
+  }
+
   DEBUG_PRINT("Using %s motor driver\n", motorMap[0]->drvType == BRUSHED ? "brushed" : "brushless");
 
   for (i = 0; i < NBR_OF_MOTORS; i++)
@@ -216,6 +222,8 @@ bool motorsTest(void)
   return isInit;
 }
 
+uint16_t thrustCache[NBR_OF_MOTORS] = {0};
+
 // Ithrust is thrust mapped for 65536 <==> 60 grams
 void motorsSetRatio(uint32_t id, uint16_t ithrust)
 {
@@ -243,9 +251,13 @@ void motorsSetRatio(uint32_t id, uint16_t ithrust)
     {
       motorMap[id]->setCompare(motorMap[id]->tim, motorsBLConv16ToBits(ratio));
     }
-    else
+    else if (motorMap[id]->drvType == BRUSHED)
     {
       motorMap[id]->setCompare(motorMap[id]->tim, motorsConv16ToBits(ratio));
+    }
+    else
+    {
+      thrustCache[id] = ithrust;
     }
   }
 }
@@ -259,9 +271,13 @@ int motorsGetRatio(uint32_t id)
   {
     ratio = motorsBLConvBitsTo16(motorMap[id]->getCompare(motorMap[id]->tim));
   }
-  else
+  else if (motorMap[id]->drvType == BRUSHED)
   {
     ratio = motorsConvBitsTo16(motorMap[id]->getCompare(motorMap[id]->tim));
+  }
+  else
+  {
+    ratio = thrustCache[id];
   }
 
   return ratio;

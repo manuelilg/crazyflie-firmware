@@ -47,6 +47,8 @@
 #define BIGQUAD_BAT_CURR_PIN       DECK_GPIO_SCK
 #define BIGQUAD_BAT_AMP_PER_VOLT   1.0f
 
+#define BIGQUAD_DSHOT
+
 #ifdef ENABLE_BQ_DECK
 
 //Hardware configuration
@@ -80,8 +82,14 @@ static void bigquadInit(DeckInfo *info)
   }
 
   DEBUG_PRINT("Switching to brushless.\n");
+#ifdef BIGQUAD_DSHOT
+  motorsInit(motorMapNoMotors);
+  extRxInit();
+#else
   motorsInit(motorMapBigQuadDeck);
   extRxInit();
+#endif
+
 #ifdef BQ_DECK_ENABLE_PM
   pmEnableExtBatteryVoltMeasuring(BIGQUAD_BAT_VOLT_PIN, BIGQUAD_BAT_VOLT_MULT);
   pmEnableExtBatteryCurrMeasuring(BIGQUAD_BAT_CURR_PIN, BIGQUAD_BAT_AMP_PER_VOLT);

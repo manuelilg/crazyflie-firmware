@@ -521,16 +521,37 @@ static const MotorPerifDef DECK_MOSI =
     .preloadConfig = TIM_OC1PreloadConfig,
 };
 
+static const MotorPerifDef NO_MOTOR =
+{
+    .drvType       = NONE,
+    .gpioPerif     = NULL,
+    .gpioPort      = NULL,
+    .gpioPin       = NULL,
+    .gpioPinSource = NULL,
+    .gpioOType     = NULL,
+    .gpioAF        = NULL,
+    .timPerif      = NULL,
+    .tim           = NULL,
+    .timPolarity   = NULL,
+    .timDbgStop    = NULL,
+    .timPeriod     = NULL,
+    .timPrescaler  = NULL,
+    .setCompare    = NULL,
+    .getCompare    = NULL,
+    .ocInit        = NULL,
+    .preloadConfig = NULL,
+};
+
 /**
  * Mapping for Tags that don't have motors.
  * Actually same mapping as for CF2 but the pins are not connected.
  */
 const MotorPerifDef* motorMapNoMotors[NBR_OF_MOTORS] =
 {
-  &CONN_M1,
-  &CONN_M2,
-  &CONN_M3,
-  &CONN_M4
+  &NO_MOTOR,
+  &NO_MOTOR,
+  &NO_MOTOR,
+  &NO_MOTOR
 };
 
 /**

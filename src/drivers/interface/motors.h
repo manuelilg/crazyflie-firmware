@@ -170,7 +170,8 @@
 typedef enum
 {
   BRUSHED,
-  BRUSHLESS
+  BRUSHLESS,
+  NONE
 } motorsDrvType;
 
 typedef struct
